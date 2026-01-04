@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LRU Cache Visualizer</title>
+
+<style>
+/* ================== DESIGN TOKENS ================== */
+:root {
+  --bg-top: #020617;
+  --bg-bottom: #0b1220;
+
+  --panel: #0b1628;
+  --panel-2: #0f1b2d;
+
+  --border: #1e293b;
+  --border-soft: #1f3550;
+
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+
+  --cyan: #22d3ee;
+  --cyan-soft: #0ea5b7;
+
+  --purple: #c084fc;
+  --red: #ef4444;
+
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+}
+
+/* ================== RESET ================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+body {
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+  color: var(--text);
+}
+
+/* ================== HEADER ================== */
+header {
+  height: 64px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--cyan), #38bdf8);
+  display: grid;
+  place-items: center;
+  color: #020617;
+  font-weight: 900;
+}
+
+.brand h1 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.brand p {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-controls span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+input, button {
+  background: #020617;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+}
+
+button {
+  cursor: pointer;
+}
+
+/* ================== MAIN LAYOUT ================== */
+main {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 24px;
+  padding: 24px;
+}
+
+@media (max-width: 1024px) {
+  main {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================== PANELS ================== */
+.panel {
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+
+/* ================== OPERATIONS ================== */
+.panel h2 {
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.panel small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.section {
+  margin-top: 14px;
+}
+
+label {
+  font-size: 12px;
+  color: var(--cyan);
+}
+
+input.full {
+  width: 100%;
+  margin-top: 6px;
+}
+
+button.primary {
+  width: 100%;
+  margin-top: 10px;
+  background: linear-gradient(135deg, var(--cyan), #38bdf8);
+  color: #020617;
+  border: none;
+  font-weight: 600;
+}
+
+.or {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 12px 0;
+}
+
+/* ================== LOG ================== */
+.log {
+  margin-top: 12px;
+  height: 220px;
+  overflow-y: auto;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ================== CACHE STATE ================== */
+.cache-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.legend {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.legend span {
+  margin-right: 10px;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+
+.dot.mru { background: var(--cyan); }
+.dot.lru { background: #475569; }
+
+.cache-box {
+  border: 1px dashed var(--border-soft);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  min-height: 220px;
+  position: relative;
+}
+
+.head-label,
+.tail-label {
+  position: absolute;
+  top: -12px;
+  font-size: 11px;
+  color: var(--cyan);
+}
+
+.tail-label {
+  right: 16px;
+}
+
+.cache-row {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+/* ================== CACHE NODE ================== */
+.node {
+  width: 130px;
+  height: 170px;
+  background: linear-gradient(180deg, #0f2a3d, #102437);
+  border: 1px solid var(--cyan-soft);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  position: relative;
+}
+
+.badge {
+  position: absolute;
+  top: -10px;
+  left: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.badge.mru {
+  background: var(--cyan);
+  color: #020617;
+}
+
+.badge.lru {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+
+.node .key {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 22px;
+}
+
+.node .val {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 16px;
+  color: var(--purple);
+}
+
+/* ================== EMPTY SLOT ================== */
+.empty {
+  width: 130px;
+  height: 170px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ================== INFO CARDS ================== */
+.info-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+}
+
+@media (max-width: 900px) {
+  .info-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.info {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.info strong {
+  color: var(--text);
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-icon">⛁</div>
+    <div>
+      <h1>LRU Cache Visualizer</h1>
+      <p>Least Recently Used Algorithm</p>
+    </div>
+  </div>
+
+  <div class="header-controls">
+    <span>Capacity:</span>
+    <input id="capacity" type="number" value="2" min="1" />
+    <button onclick="reset()">⟳ Reset</button>
+  </div>
+</header>
+
+<main>
+
+<!-- LEFT -->
+<div class="panel">
+  <h2>Operations</h2>
+  <small>Interact with the cache</small>
+
+  <div class="section">
+    <label>PUT (Key, Value)</label>
+    <input id="putKey" class="full" placeholder="Key" />
+    <input id="putVal" class="full" placeholder="Value" />
+    <button class="primary" onclick="put()">＋ Insert / Update</button>
+  </div>
+
+  <div class="or">OR</div>
+
+  <div class="section">
+    <label>GET (Key)</label>
+    <input id="getKey" class="full" placeholder="Search Key" />
+    <button class="full" onclick="get()">🔍 Access</button>
+  </div>
+
+  <h2 style="margin-top:14px">Log History</h2>
+  <div id="log" class="log"></div>
+</div>
+
+<!-- RIGHT -->
+<div>
+  <div class="cache-header">
+    <h2>Cache State</h2>
+    <div class="legend">
+      <span><i class="dot mru"></i>Most Recently Used (Head)</span>
+      <span><i class="dot lru"></i>Least Recently Used (Tail)</span>
+    </div>
+  </div>
+
+  <div class="cache-box">
+    <div class="head-label">HEAD</div>
+    <div class="tail-label">TAIL</div>
+    <div id="cache" class="cache-row"></div>
+  </div>
+
+  <div class="info-row">
+    <div class="info">
+      <strong>＋ Insert (Put)</strong><br/>
+      Adds item to the front (MRU). If full, LRU is removed.
+    </div>
+    <div class="info">
+      <strong>🔍 Access (Get)</strong><br/>
+      Moves accessed item to front (MRU).
+    </div>
+    <div class="info">
+      <strong>🗑 Eviction</strong><br/>
+      Least recently used item is discarded.
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+class Node {
+  constructor(k, v) {
+    this.k = k;
+    this.v = v;
+    this.prev = this.next = null;
+  }
+}
+
+class LRU {
+  constructor(cap) {
+    this.cap = cap;
+    this.map = new Map();
+    this.head = new Node(0, 0);
+    this.tail = new Node(0, 0);
+    this.head.next = this.tail;
+    this.tail.prev = this.head;
+  }
+
+  add(n) {
+    n.next = this.head.next;
+    n.prev = this.head;
+    this.head.next.prev = n;
+    this.head.next = n;
+  }
+
+  remove(n) {
+    n.prev.next = n.next;
+    n.next.prev = n.prev;
+  }
+
+  get(k) {
+    if (!this.map.has(k)) return null;
+    let n = this.map.get(k);
+    this.remove(n);
+    this.add(n);
+    return n.v;
+  }
+
+  put(k, v) {
+    if (this.map.has(k)) this.remove(this.map.get(k));
+    let n = new Node(k, v);
+    this.add(n);
+    this.map.set(k, n);
+    if (this.map.size > this.cap) {
+      let lru = this.tail.prev;
+      this.remove(lru);
+      this.map.delete(lru.k);
+      log(`EVICT → Key ${lru.k}`);
+    }
+  }
+
+  list() {
+    let res = [];
+    let cur = this.head.next;
+    while (cur !== this.tail) {
+      res.push(cur);
+      cur = cur.next;
+    }
+    return res;
+  }
+}
+
+let cache;
+
+function reset() {
+  cache = new LRU(+capacity.value);
+  logEl.innerHTML = "";
+  render();
+}
+
+function put() {
+  if (!putKey.value) return;
+  cache.put(putKey.value, putVal.value);
+  log(`PUT → ${putKey.value}:${putVal.value}`);
+  render();
+}
+
+function get() {
+  let v = cache.get(getKey.value);
+  log(v === null ? `GET MISS → ${getKey.value}` : `GET HIT → ${getKey.value}:${v}`);
+  render();
+}
+
+function render() {
+  cacheEl.innerHTML = "";
+  let arr = cache.list();
+
+  arr.forEach((n, i) => {
+    let d = document.createElement("div");
+    d.className = "node";
+    if (i === 0) d.innerHTML += `<div class="badge mru">MRU</div>`;
+    if (i === arr.length - 1) d.innerHTML += `<div class="badge lru" style="top:auto;bottom:-10px;">LRU</div>`;
+    d.innerHTML += `<div class="key">${n.k}</div><div class="val">${n.v}</div>`;
+    cacheEl.appendChild(d);
+  });
+
+  for (let i = arr.length; i < cache.cap; i++) {
+    let e = document.createElement("div");
+    e.className = "empty";
+    e.textContent = "EMPTY";
+    cacheEl.appendChild(e);
+  }
+}
+
+function log(msg) {
+  logEl.innerHTML += `<div>${new Date().toLocaleTimeString()} — ${msg}</div>`;
+}
+
+const cacheEl = document.getElementById("cache");
+const logEl = document.getElementById("log");
+
+reset();
+</script>
+
+</body>
+</html>
